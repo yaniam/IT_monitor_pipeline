@@ -1,0 +1,5 @@
+﻿name: DE_pipeline
+channels:
+dependencies:
+
+prefix: "C:\\Users\\ian_m\\micromamba\\envs\\DE_pipeline"
