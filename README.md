@@ -2,6 +2,16 @@
 
 This repo simulates a tiny fleet of ATMs/CC/PD/PC devices, exposes their stats through a FastAPI endpoint, ingests each batch into files + SQLite, and keeps an eye on uptime with a small SRE toolkit. It’s meant to feel realistic enough for data-engineering dry runs without needing any external systems.
 
+## Tools used
+- **Python 3.11** (via Micromamba/Conda env)
+- **FastAPI + Uvicorn** for the synthetic API
+- **Requests** for ingestion calls
+- **SQLite** for time-series storage
+- **Pandas** for transformations and analytics
+- **Streamlit** for the dashboard
+- **Airflow** to orchestrate the ingest DAG
+- **Git** for version control
+
 ![Dashboard trend](Figures/dashboard_graph.jpg)
 
 ## Highlights
