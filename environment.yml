@@ -1,5 +1,13 @@
 ﻿name: DE_pipeline
 channels:
+  - conda-forge
 dependencies:
-
-prefix: "C:\\Users\\ian_m\\micromamba\\envs\\DE_pipeline"
+  - python=3.11
+  - pip
+  - pip:
+      - fastapi>=0.110
+      - uvicorn>=0.30
+      - requests>=2.32
+      - numpy>=2.2,<2.3
+      - pandas>=2.2,<2.3
+      - streamlit>=1.39

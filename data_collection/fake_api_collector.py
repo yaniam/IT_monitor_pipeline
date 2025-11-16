@@ -16,9 +16,12 @@ from typing import Dict, Optional
 import requests
 
 from common.segment_utils import ensure_output_dirs, flatten_segments
+from data_collection.store_timeseries import store_rows as store_timeseries_rows
+from sre_analysis.online_monitor import run_post_ingestion_monitor
 
 SIM_STATE_DEFAULT = Path("data_collection") / "simulation_clock.txt"
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+DEFAULT_DB_PATH = Path("data_collection") / "segment_timeseries.db"
 
 
 def parse_args() -> argparse.Namespace:
@@ -72,6 +75,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=SIM_STATE_DEFAULT,
         help="Where to persist the simulated clock (default: data_collection/simulation_clock.txt).",
+    )
+    parser.add_argument(
+        "--timeseries-db",
+        type=Path,
+        default=DEFAULT_DB_PATH,
+        help="SQLite database path for aggregated time-series (default: data_collection/segment_timeseries.db).",
     )
     return parser.parse_args()
 
@@ -157,6 +166,7 @@ def run_ingestion(
     timeout: int = 30,
     simulate_minutes: Optional[int] = None,
     simulation_state_file: Path = SIM_STATE_DEFAULT,
+    timeseries_db: Path = DEFAULT_DB_PATH,
 ) -> Path:
     effective_current_time = determine_current_time(current_time, simulate_minutes, simulation_state_file)
     api_payload = {
@@ -167,8 +177,22 @@ def run_ingestion(
     }
     payload = call_api(api_url, api_payload, timeout=timeout)
     csv_path = persist_outputs(payload, output_dir)
+    store_timeseries_rows(csv_path, timeseries_db, payload["generated_at"])
+    _run_sre_monitor(timeseries_db)
     print(f"Ingestion finished for timestamp {payload['generated_at']}")
     return csv_path
+
+
+def _run_sre_monitor(db_path: Path) -> None:
+    try:
+        result = run_post_ingestion_monitor(db_path=db_path)
+    except Exception as exc:  # pragma: no cover - best-effort telemetry
+        print(f"[SRE] Unable to evaluate online percentage: {exc}")
+        return
+
+    print(result.message)
+    if result.alert_triggered:
+        print("[SRE] ALERT emitted (see sre_analysis/alerts.log for details).")
 
 
 def main() -> None:
@@ -183,6 +207,7 @@ def main() -> None:
         timeout=args.timeout,
         simulate_minutes=args.simulate_minutes,
         simulation_state_file=args.simulation_state_file,
+        timeseries_db=args.timeseries_db,
     )
 
 
