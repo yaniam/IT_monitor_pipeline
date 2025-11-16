@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from typing import Optional
 
 from common.segment_utils import (
     DATASET_PATH,
@@ -17,7 +18,7 @@ app = FastAPI(title="Synthetic Segment Stats API", version="1.0.0")
 
 
 class SegmentRequest(BaseModel):
-    current_time: str | None = Field(
+    current_time: Optional[str] = Field(
         default=None, description="Override current time (YYYY-MM-DD HH:MM:SS)."
     )
     window_minutes: int = Field(

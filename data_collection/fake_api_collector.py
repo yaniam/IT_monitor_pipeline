@@ -9,12 +9,16 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 import requests
 
 from common.segment_utils import ensure_output_dirs, flatten_segments
+
+SIM_STATE_DEFAULT = Path("data_collection") / "simulation_clock.txt"
+TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def parse_args() -> argparse.Namespace:
@@ -58,6 +62,17 @@ def parse_args() -> argparse.Namespace:
         default=30,
         help="HTTP timeout in seconds.",
     )
+    parser.add_argument(
+        "--simulate-minutes",
+        type=int,
+        help="Advance a simulated clock by this many minutes per run. Useful for fast testing.",
+    )
+    parser.add_argument(
+        "--simulation-state-file",
+        type=Path,
+        default=SIM_STATE_DEFAULT,
+        help="Where to persist the simulated clock (default: data_collection/simulation_clock.txt).",
+    )
     return parser.parse_args()
 
 
@@ -97,17 +112,55 @@ def persist_outputs(payload: Dict[str, object], output_dir: Path) -> Path:
     return csv_path
 
 
+def load_simulated_time(path: Path) -> Optional[datetime]:
+    if not path.exists():
+        return None
+    text = path.read_text(encoding="utf-8").strip()
+    if not text:
+        return None
+    try:
+        return datetime.strptime(text, TIME_FORMAT)
+    except ValueError:
+        return None
+
+
+def save_simulated_time(path: Path, value: datetime) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(value.strftime(TIME_FORMAT), encoding="utf-8")
+
+
+def determine_current_time(
+    explicit_time: Optional[str],
+    simulate_minutes: Optional[int],
+    state_file: Path,
+) -> Optional[str]:
+    if explicit_time:
+        return explicit_time
+    if simulate_minutes is None:
+        return None
+
+    last_time = load_simulated_time(state_file)
+    if last_time is None:
+        last_time = datetime.utcnow()
+    next_time = last_time + timedelta(minutes=simulate_minutes)
+    save_simulated_time(state_file, next_time)
+    return next_time.strftime(TIME_FORMAT)
+
+
 def run_ingestion(
     api_url: str,
     output_dir: Path,
-    current_time: str | None = None,
+    current_time: Optional[str] = None,
     window_minutes: int = 60,
     frequency_minutes: int = 15,
     update_probability: float = 0.10,
     timeout: int = 30,
+    simulate_minutes: Optional[int] = None,
+    simulation_state_file: Path = SIM_STATE_DEFAULT,
 ) -> Path:
+    effective_current_time = determine_current_time(current_time, simulate_minutes, simulation_state_file)
     api_payload = {
-        "current_time": current_time,
+        "current_time": effective_current_time,
         "window_minutes": window_minutes,
         "frequency_minutes": frequency_minutes,
         "update_probability": update_probability,
@@ -128,6 +181,8 @@ def main() -> None:
         frequency_minutes=args.frequency_minutes,
         update_probability=args.update_probability,
         timeout=args.timeout,
+        simulate_minutes=args.simulate_minutes,
+        simulation_state_file=args.simulation_state_file,
     )
 
 

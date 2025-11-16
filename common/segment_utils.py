@@ -4,7 +4,7 @@ import csv
 import random
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Sequence, Tuple
+from typing import Dict, Iterable, Iterator, List, Optional, Sequence, Tuple
 
 SEGMENTS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("State", ("state",)),
@@ -71,7 +71,7 @@ def write_devices(path: Path, devices: Sequence[Dict[str, str]]) -> None:
             writer.writerow(normalized)
 
 
-def parse_timestamp(value: str) -> datetime | None:
+def parse_timestamp(value: str) -> Optional[datetime]:
     if not value:
         return None
     try:
@@ -104,7 +104,7 @@ def aggregate_segment(devices: Iterable[Dict[str, str]], dimensions: Sequence[st
     return rows
 
 
-def parse_current_time(value: str | None) -> datetime:
+def parse_current_time(value: Optional[str]) -> datetime:
     if not value:
         return datetime.utcnow()
 
