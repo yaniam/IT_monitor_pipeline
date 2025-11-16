@@ -22,6 +22,26 @@ This repo simulates a tiny fleet of ATMs/CC/PD/PC devices, exposes their stats t
 | `sre_analysis/dashboard.py` | Streamlit dashboard to explore the online KPI and compare multiple segments/dimensions. |
 | `airflow/dags/segment_stats_dag.py` | An example DAG that wires everything together. |
 
+## Data dictionary
+
+- `device_code` – unique ID built from the machine type prefix (`AT`, `CC`, `PD`, `PC`) plus a six-digit sequence.
+- `acquisition_sequence` – branch identifier glued to the acquisition date (YYYYMMDD), e.g., `12345` + `20230615`.
+- `branch_id` – five-digit branch code where the device belongs.
+- `state` – Brazilian state (two-letter code) that hosts the device.
+- `has_error` – boolean flag (`True`/`False`) that signals whether the device is in trouble.
+- `machine_type` – top-level category: ATM, CC, PD, or PC.
+- `machine_model` – specific model within the type (ATMv18, Bell2021, etc.).
+- `supplier` – vendor/manufacturer string.
+- `network_address` – private IPv4 address assigned to the box.
+- `operating_system` – OS family (Ubuntu, Windows).
+- `os_version` – version string with one decimal place.
+- `acquisition_date` – when the device entered the fleet (`YYYY-MM-DD`).
+- `last_connection_ts` – last telemetry timestamp captured for that device (`YYYY-MM-DD HH:MM:SS` in UTC).
+
+Segments produced by the API reuse the same raw fields in the `dim*_name`/`dim*_value` pairs. For example:
+- `segment="State"` → `dim1_name="state"`, `dim1_value="SP"`.
+- `segment="Type and OS and OS_version"` → dims contain `machine_type`, `operating_system`, `os_version`.
+
 ## Getting started
 1. **Clone & install dependencies**
    ```bash
